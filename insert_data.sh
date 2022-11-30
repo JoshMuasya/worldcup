@@ -9,84 +9,81 @@ fi
 
 # Do not change code above this line. Use the PSQL variable above to query your database.
 
-# TRUNCATE Tables
-echo $($PSQL "TRUNCATE games, teams")
+# TEAMS
+
+echo $($PSQL "TRUNCATE teams, games")
 
 cat games.csv | while IFS="," read YEAR ROUND WINNER OPPONENT WINNER_GOALS OPPONENT_GOALS
+
+do 
+
+  # Remove Header 
+  if [[ $YEAR != year ]]
+  then
+
+    # Get two team ids
+    WINNER_ID=$($PSQL "SELECT team_id FROM teams WHERE name='$WINNER'")
+    OPPONENT_ID=$($PSQL "SELECT team_id FROM teams WHERE name='$OPPONENT'")
+
+    # if not found
+    if [[ -z $WINNER_ID ]]
+    then
+
+      # Insert winner
+      INSERT_WINNER=$($PSQL "INSERT INTO teams(name) VALUES('$WINNER')")
+
+      if [[ $INSERT_WINNER == 'INSERT 0 1' ]]
+      then
+
+        echo Inserted winner: $WINNER
+
+      fi
+
+    fi
+
+    # If not found
+    if [[ -z $OPPONENT_ID ]]
+    then
+
+      # Insert Opponent
+      INSERT_OPPONENT=$($PSQL "INSERT INTO teams(name) VALUES('$OPPONENT')")
+
+      if [[ $INSERT_OPPONENT == 'INSERT 0 1' ]]
+      then
+
+        echo Inserted opponent: $OPPONENT
+
+      fi
+
+    fi
+
+  fi
+
+done
+
+# GAMES
+cat games.csv | while IFS="," read YEAR ROUND WINNER OPPONENT WINNER_GOALS OPPONENT_GOALS
+
 do
 
-    # TEAMS
-    if [[ $WINNER != winner ]]
+  # Remove Header
+  if [[ $YEAR != year ]]
+  then
+
+    # Get winner and opponent id
+    WIN_ID=$($PSQL "SELECT team_id FROM teams WHERE teams.name='$WINNER'")
+    OPP_ID=$($PSQL "SELECT team_id FROM teams WHERE teams.name='$OPPONENT'")
+
+    # Insert data into Games
+    INSERT_DATA=$($PSQL "INSERT INTO games(year, round, winner_id, opponent_id, winner_goals, opponent_goals) VALUES($YEAR, '$ROUND', $WIN_ID, $OPP_ID, $WINNER_GOALS, $OPPONENT_GOALS)")
+
+    if [[ $INSERT_DATA == 'INSERT 0 1' ]]
     then
-      # Get team_id
-      TEAM_ID=$($PSQL "SELECT team_id FROM teams WHERE name='$WINNER'")
 
-      # if not found
-      if [[ -z $TEAM_ID ]]
-      then
-        # insert team
-        INSERT_TEAM=$($PSQL "INSERT INTO teams(name) VALUES('$WINNER')")
-
-        if [[ INSERT_TEAM == 'INSERT 0 1' ]]
-        then
-          echo Inserted into teams $WINNER
-        fi
-
-        # get new game_id 
-        TEAM_ID=$($PSQL "SELECT team_id FROM teams WHERE name='$WINNER'")
-
-      fi
+      echo Inserted data: $YEAR, $ROUND, $WIN_ID, $OPP_ID, $WINNER_GOALS, $OPPONENT_GOALS
 
     fi
 
-    if [[ $OPPONENT != opponent ]]
-    then
-      # Get team_id
-      TEAM_ID=$($PSQL "SELECT team_id FROM teams WHERE name='$OPPONENT'")
-
-      # if not found
-      if [[ -z $TEAM_ID ]]
-      then
-        # insert team
-        INSERT_TEAM=$($PSQL "INSERT INTO teams(name) VALUES('$OPPONENT')")
-
-        if [[ INSERT_TEAM == 'INSERT 0 1' ]]
-        then
-          echo Inserted into teams $OPPONENT
-        fi
-
-        # get new game_id 
-        TEAM_ID=$($PSQL "SELECT team_id FROM teams WHERE name='$OPPONENT'")
-
-      fi
-    fi
-
-    if [[ $YEAR != year ]] || [[ $ROUND != round ]] || [[ $WINNER != winner ]] || [[ $OPPONENT != opponent ]] || [[ $WINNER_GOALS != winner_goals ]] || [[ $OPPONENT_GOALS != opponent_goals ]]
-    then
-        # Get game_id
-        GAME_ID=$($PSQL "SELECT game_id FROM games WHERE winner='$WINNER_ID'")
-
-        # Get winner_id
-        WINNER_ID=$($PSQL "SELECT team_id FROM teams WHERE name='$WINNER'")
-
-
-        # Get opponent_id
-        OPPONENT_ID=$($PSQL "SELECT team_id FROM teams WHERE name='$OPPONENT'")
-
-        # if not found
-        if [[ -z $GAME_ID ]]
-        then
-            # insert year
-            INSERT_YEAR=$($PSQL "INSERT INTO games(year, round, winner_id, opponent_id, winner_goals, opponent_goals) VALUES($YEAR, '$ROUND', $WINNER_ID, $OPPONENT_ID, $WINNER_GOALS, $OPPONENT_GOALS)")
-
-            if [[ $INSERT_YEAR == 'INSERT 0 1' ]]
-            then
-                echo Inserted into games, $YEAR, $ROUND, $WINNER_ID, $OPPONENT_ID, $WINNER_GOALS, $OPPONENT_GOALS
-            fi
-
-            # get new game_id 
-            GAME_ID=$($PSQL "SELECT game_id FROM games WHERE winner='$WINNER_ID'")
-        fi
-    fi
+  fi
 
 done
